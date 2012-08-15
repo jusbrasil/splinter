@@ -14,9 +14,13 @@ class WebDriver(BaseWebDriver):
 
     driver_name = "Chrome"
 
-    def __init__(self, user_agent=None):
+    def __init__(self, user_agent=None, chrome_options=None):
         self._patch_subprocess()
-        options = Options()
+
+        if chrome_options is None:
+            options = Options()
+        else:
+            options = chrome_options
 
         if user_agent is not None:
             options.add_argument("--user-agent=" + user_agent)
