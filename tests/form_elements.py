@@ -49,6 +49,12 @@ class FormElementsTest(object):
         self.browser.select("uf", "rj")
         self.assertTrue(self.browser.find_option_by_value("rj").first.selected)
 
+    def test_can_select_a_option_via_element(self):
+        "should provide a way to select a option via element"
+        self.assertFalse(self.browser.find_option_by_value("rj").selected)
+        self.browser.find_by_name("uf").select("rj")
+        self.assertTrue(self.browser.find_option_by_value("rj").selected)
+
     def test_can_check_a_checkbox(self):
         "should provide a way to check a radio checkbox"
         self.assertFalse(self.browser.find_by_name("some-check").first.checked)
@@ -80,6 +86,13 @@ class FormElementsTest(object):
         self.browser.fill_form({'query': 'new query'})
         value = self.browser.find_by_name('query').first.value
         self.assertEqual('new query', value)
+
+    def test_can_fill_password_field_in_form(self):
+        "should provide a way to change password value"
+        new_password = 'new password'
+        self.browser.fill_form({'password': new_password})
+        value = self.browser.find_by_name('password').first.value
+        self.assertEqual(new_password, value)
 
     def test_can_fill_more_than_one_field_in_form(self):
         "should provide a away to change field value"

@@ -5,8 +5,6 @@
 # license that can be found in the LICENSE file.
 
 from __future__ import with_statement
-import logging
-import subprocess
 import time
 import re
 from contextlib import contextmanager
@@ -17,43 +15,12 @@ from selenium.webdriver.common.action_chains import ActionChains
 from splinter.driver import DriverAPI, ElementAPI
 from splinter.element_list import ElementList
 from splinter.utils import warn_deprecated
-from tempfile import TemporaryFile
 
 
 class BaseWebDriver(DriverAPI):
-    old_popen = subprocess.Popen
 
     def __init__(self, wait_time=2):
         self.wait_time = wait_time
-
-    def _patch_subprocess(self):
-        loggers_to_silence = [
-            'selenium.webdriver.firefox.extension_connection',
-            'selenium.webdriver.remote.remote_connection',
-            'selenium.webdriver.remote.utils',
-        ]
-
-        class MutedHandler(logging.Handler):
-            pass
-
-        for name in loggers_to_silence:
-            logger = logging.getLogger(name)
-            logger.addHandler(MutedHandler())
-            logger.setLevel(99999)
-
-        # selenium is such a verbose guy let's make it open the
-        # browser without showing all the meaningless output
-        def MyPopen(*args, **kw):
-            kw['stdout'] = TemporaryFile()
-            kw['stderr'] = TemporaryFile()
-            kw['close_fds'] = True
-            return self.old_popen(*args, **kw)
-
-        subprocess.Popen = MyPopen
-
-    def _unpatch_subprocess(self):
-        # cleaning up the house
-        subprocess.Popen = self.old_popen
 
     def __enter__(self):
         return self
@@ -160,6 +127,11 @@ class BaseWebDriver(DriverAPI):
                 return True
             except ValueError:
                 pass
+            except NoSuchElementException:
+                # This exception will be thrown if the body tag isn't present
+                # This has occasionally been observed. Assume that the
+                # page isn't fully loaded yet
+                pass
         return False
 
     def is_text_not_present(self, text, wait_time=None):
@@ -171,6 +143,11 @@ class BaseWebDriver(DriverAPI):
                 self.driver.find_element_by_tag_name('body').text.index(text)
             except ValueError:
                 return True
+            except NoSuchElementException:
+                # This exception will be thrown if the body tag isn't present
+                # This has occasionally been observed. Assume that the
+                # page isn't fully loaded yet
+                pass
         return False
 
     @contextmanager
@@ -249,7 +226,7 @@ class BaseWebDriver(DriverAPI):
         for name, value in field_values.items():
             elements = self.find_by_name(name)
             element = elements.first
-            if element['type'] == 'text' or element.tag_name == 'textarea':
+            if element['type'] in ['text', 'password'] or element.tag_name == 'textarea':
                 element.value = value
             elif element['type'] == 'checkbox':
                 if value:
@@ -292,9 +269,28 @@ class BaseWebDriver(DriverAPI):
     def cookies(self):
         return self._cookie_manager
 
+    @property
+    def current_window(self):
+        """
+        Returns the handle of the current window.
+        """
+        return self.driver.current_window_handle
+
+    @property
+    def windows(self):
+        """
+        Returns the handles of all windows within the current session.
+        """
+        return self.driver.window_handles
+
+    def switch_to_window(self, window_name):
+        """
+        Switches focus to the specified window.
+        """
+        return self.driver.switch_to_window(window_name)
+
 
 class TypeIterator(object):
-
 
     def __init__(self, element, keys):
         self._element = element
@@ -333,6 +329,9 @@ class WebDriverElement(ElementAPI):
 
     def fill(self, value):
         self.value = value
+
+    def select(self, value):
+        self.find_by_xpath('//select[@name="%s"]/option[@value="%s"]' % (self["name"], value))._element.click()
 
     def type(self, value, slowly=False):
         if slowly:

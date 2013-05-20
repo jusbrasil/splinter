@@ -14,9 +14,8 @@ class WebDriver(BaseWebDriver):
 
     driver_name = "Chrome"
 
-    def __init__(self, user_agent=None, chrome_options=None):
-        self._patch_subprocess()
-
+    def __init__(self, user_agent=None, wait_time=2, chrome_options=None):
+        
         if chrome_options is None:
             options = Options()
         else:
@@ -26,10 +25,9 @@ class WebDriver(BaseWebDriver):
             options.add_argument("--user-agent=" + user_agent)
 
         self.driver = Chrome(chrome_options=options)
-        self._unpatch_subprocess()
 
         self.element_class = WebDriverElement
 
         self._cookie_manager = ChromeCookieManager(self.driver)
 
-        super(WebDriver, self).__init__()
+        super(WebDriver, self).__init__(wait_time)

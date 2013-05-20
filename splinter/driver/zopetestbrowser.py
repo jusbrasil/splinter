@@ -10,12 +10,14 @@ import re
 from lxml.cssselect import CSSSelector
 from zope.testbrowser.browser import Browser
 from splinter.element_list import ElementList
+from splinter.exceptions import ElementDoesNotExist
 from splinter.driver import DriverAPI, ElementAPI
 from splinter.cookie_manager import CookieManagerAPI
 
 import mimetypes
 import lxml.html
 import mechanize
+import time
 
 
 class CookieManager(CookieManagerAPI):
@@ -49,7 +51,8 @@ class ZopeTestBrowser(DriverAPI):
 
     driver_name = "zope.testbrowser"
 
-    def __init__(self, user_agent=None):
+    def __init__(self, user_agent=None, wait_time=2):
+        self.wait_time = wait_time
         mech_browser = self._get_mech_browser(user_agent)
         self._browser = Browser(mech_browser=mech_browser)
 
@@ -116,7 +119,7 @@ class ZopeTestBrowser(DriverAPI):
 
         for xpath_element in html.xpath(xpath):
             if self._element_is_link(xpath_element):
-                return self.find_link_by_text(xpath_element.text)
+                return self._find_links_by_xpath(xpath)
             elif self._element_is_control(xpath_element):
                 return self.find_by_name(xpath_element.name)
             else:
@@ -168,7 +171,7 @@ class ZopeTestBrowser(DriverAPI):
         for name, value in field_values.items():
             element = self.find_by_name(name)
             control = element.first._control
-            if control.type in ['text', 'textarea']:
+            if control.type in ['text', 'textarea', 'password']:
                 control.value = value
             elif control.type == 'checkbox':
                 if value:
@@ -193,9 +196,10 @@ class ZopeTestBrowser(DriverAPI):
         control.value = []
 
     def attach_file(self, name, file_path):
+        filename = file_path.split('/')[-1]
         control = self._browser.getControl(name=name)
         content_type, _ = mimetypes.guess_type(file_path)
-        control.add_file(open(file_path), content_type, None)
+        control.add_file(open(file_path), content_type, filename)
 
     def _find_links_by_xpath(self, xpath):
         html = lxml.html.fromstring(self.html)
@@ -204,6 +208,34 @@ class ZopeTestBrowser(DriverAPI):
 
     def select(self, name, value):
         self.find_by_name(name).first._control.value = [value]
+
+    def is_text_present(self, text, wait_time=None):
+        wait_time = wait_time or self.wait_time
+        end_time = time.time() + wait_time
+
+        while time.time() < end_time:
+            if self._is_text_present(text):
+                return True
+        return False
+
+    def _is_text_present(self, text):
+        try:
+            body = self.find_by_tag('body').first
+            return text in body.text
+        except ElementDoesNotExist:
+            # This exception will be thrown if the body tag isn't present
+            # This has occasionally been observed. Assume that the
+            # page isn't fully loaded yet
+            return False
+
+    def is_text_not_present(self, text, wait_time=None):
+        wait_time = wait_time or self.wait_time
+        end_time = time.time() + wait_time
+
+        while time.time() < end_time:
+            if not self._is_text_present(text):
+                return True
+        return False
 
     def _element_is_link(self, element):
         return element.tag == 'a'
@@ -314,6 +346,8 @@ class ZopeTestBrowserControlElement(ZopeTestBrowserElement):
     def fill(self, value):
         self._control.value = value
 
+    def select(self, value):
+        self._control.value = [value]
 
 class ZopeTestBrowserOptionElement(ZopeTestBrowserElement):
 

@@ -1,17 +1,13 @@
 #!/usr/bin/env python
 
-# Copyright 2012 splinter authors. All rights reserved.
+# Copyright 2013 splinter authors. All rights reserved.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
 # -*- coding: utf-8 -*-
 import argparse
 import sys
-
-try:
-    import unittest2 as unittest
-except ImportError, e:
-    import unittest
+import unittest
 
 from multiprocessing import Process
 from urllib import urlopen
@@ -22,6 +18,7 @@ from tests.fake_webapp import start_flask_app, EXAMPLE_APP
 parser = argparse.ArgumentParser('Run splinter tests')
 parser.add_argument('-w', '--which', action='store')
 parser.add_argument('-f', '--failfast', action='store_true')
+parser.add_argument('-v', '--verbosity', type=int, default=1)
 
 
 class Env(object):
@@ -36,7 +33,9 @@ env.host, env.port = 'localhost', 5000
 def wait_until_start():
     while True:
         try:
-            urlopen(EXAMPLE_APP)
+            results = urlopen(EXAMPLE_APP)
+            if results.code == 404:
+                raise Exception('%s returned unexpected 404' % EXAMPLE_APP)
             break
         except IOError:
             pass
@@ -85,19 +84,10 @@ def get_modules(modules_str):
     return modules
 
 
-def get_result(args):
-    result = unittest.TextTestResult(sys.stdout, descriptions=True, verbosity=1)
-
-    if args.failfast:
-        result.failfast = True
-
-    return result
-
-
-def run_suite(suite, result):
-    suite.run(result)
-
-    sys.stdout.write("\n\n")
+def run_suite(suite, args):
+    runner = unittest.TextTestRunner(sys.stdout, True, args.verbosity,
+                                     args.failfast)
+    return runner.run(suite)
 
 
 def get_suite_from_modules(modules):
@@ -115,27 +105,12 @@ def get_complete_suite():
     return loader.discover(TESTS_ROOT)
 
 
-def print_errors(result):
-    if result.errors:
-        sys.stdout.write("\nERRORS\n\n")
-        for method, trace in result.errors:
-            sys.stdout.write("Test method: %s\n" % method)
-            sys.stdout.write("%s" % trace)
-            sys.stdout.write("=" * 120)
-            sys.stdout.write("\n\n")
-
-
-def print_failures(result):
-    if result.failures:
-        sys.stdout.write("\nFAILURES\n\n")
-        for method, trace in result.failures:
-            sys.stdout.write("Test method: %s\n" % method)
-            sys.stdout.write("%s" % trace)
-            sys.stdout.write("=" * 120)
-            sys.stdout.write("\n\n")
-
 if __name__ == '__main__':
-    start_server()
+    try:
+        start_server()
+    except Exception as e:
+        sys.stdout.write("Failed to start test server: %s\n\n" % e)
+        sys.exit(1)
 
     args = parser.parse_args()
 
@@ -146,11 +121,6 @@ if __name__ == '__main__':
     else:
         suite = get_complete_suite()
 
-    result = get_result(args)
-    run_suite(suite, result)
-    print_failures(result)
-    print_errors(result)
-    sys.stdout.write("%d tests. %d failures. %d errors.\n\n" % (result.testsRun, len(result.failures), len(result.errors)))
-
+    result = run_suite(suite, args)
     stop_server()
-    sys.exit(not result.wasSuccessful())
+    sys.exit(len(result.errors) + len(result.failures))

@@ -8,7 +8,6 @@
 This module contains the basic API for splinter drivers and elemnts.
 """
 
-from splinter.within import Within
 from splinter.meta import InheritedDocs
 from splinter.request_handler.request_handler import RequestHandler
 
@@ -135,7 +134,7 @@ class DriverAPI(RequestHandler):
 
     def find_by_name(self, name):
         """
-        Finds elements in current page by them name.
+        Finds elements in current page by their name.
 
         Returns an instance of :class:`ElementList <splinter.element_list.ElementList>`.
         """
@@ -151,7 +150,7 @@ class DriverAPI(RequestHandler):
 
     def find_by_value(self, value):
         """
-        Finds elements in current page by them value.
+        Finds elements in current page by their value.
 
         Returns an instance of :class:`ElementList <splinter.element_list.ElementList>`
         """
@@ -175,7 +174,7 @@ class DriverAPI(RequestHandler):
 
     def find_link_by_partial_href(self, partial_href):
         """
-        Find links by looking for a partial ``str`` in them href attribute.
+        Find links by looking for a partial ``str`` in their href attribute.
 
         Returns an instance of :class:`ElementList <splinter.element_list.ElementList>`
         """
@@ -183,7 +182,7 @@ class DriverAPI(RequestHandler):
 
     def find_link_by_text(self, text):
         """
-        Find links querying for they text.
+        Find links querying for their text.
 
         Returns an instance of :class:`ElementList <splinter.element_list.ElementList>`
         """
@@ -191,7 +190,7 @@ class DriverAPI(RequestHandler):
 
     def find_link_by_partial_text(self, partial_text):
         """
-        Find links by looking for a partial ``str`` in them text.
+        Find links by looking for a partial ``str`` in their text.
 
         Returns an instance of :class:`ElementList <splinter.element_list.ElementList>`
         """
@@ -199,7 +198,7 @@ class DriverAPI(RequestHandler):
 
     def find_option_by_value(self, value):
         """
-        Finds ``<option>`` elements by them value.
+        Finds ``<option>`` elements by their value.
 
         Returns an instance of :class:`ElementList <splinter.element_list.ElementList>`
         """
@@ -207,7 +206,7 @@ class DriverAPI(RequestHandler):
 
     def find_option_by_text(self, text):
         """
-        Finds ``<option>`` elements by them text.
+        Finds ``<option>`` elements by their text.
 
         Returns an instance of :class:`ElementList <splinter.element_list.ElementList>`
         """
@@ -316,9 +315,6 @@ class DriverAPI(RequestHandler):
         Clicks in a link by partial content of its text.
         """
         return self.find_link_by_partial_text(partial_text).first.click()
-
-    def within(self, context):
-        return Within(self.find_by_css(context))
 
     def quit(self):
         """
@@ -539,6 +535,16 @@ class ElementAPI(object):
         Types the ``value`` in the field.
 
         It's useful to test javascript events like keyPress, keyUp, keyDown, etc.
+        """
+        raise NotImplementedError
+
+    def select(self, value, slowly=False):
+        """
+        Selects an ``<option>`` element in the element using the ``value`` of the ``<option>``.
+
+        Example:
+
+            >>> element..select("NY")
         """
         raise NotImplementedError
 

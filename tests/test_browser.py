@@ -1,25 +1,18 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2012 splinter authors. All rights reserved.
+# Copyright 2013 splinter authors. All rights reserved.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
 
 from __future__ import with_statement
-
 import __builtin__
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-
-import warnings
+import unittest
 
 from splinter.exceptions import DriverNotFoundError
-from splinter.utils import deprecate_driver_class
 
 from fake_webapp import EXAMPLE_APP
+
 
 class BrowserTest(unittest.TestCase):
 
@@ -27,9 +20,9 @@ class BrowserTest(unittest.TestCase):
         self.old_import = __builtin__.__import__
 
         def custom_import(name, *args, **kwargs):
-              if pattern in name:
-                  return None
-              return self.old_import(name, *args, **kwargs)
+            if pattern in name:
+                return None
+            return self.old_import(name, *args, **kwargs)
 
         __builtin__.__import__ = custom_import
 
@@ -53,7 +46,7 @@ class BrowserTest(unittest.TestCase):
         self.patch_driver('zope')
         from splinter import browser
         reload(browser)
-        assert 'zope.testbrowser' not in browser._DRIVERS, 'zope.testbrowser driver should not be registered when zope.testbrowser is not installed'
+        self.assertNotIn('zope.testbrowser', browser._DRIVERS)
         self.unpatch_driver(browser)
 
     def test_should_raise_an_exception_when_browser_driver_is_not_found(self):
@@ -70,47 +63,8 @@ class BrowserTest(unittest.TestCase):
     def test_zope_testbrowser_should_be_able_to_change_user_agent(self):
         self.assertTrue(self.browser_can_change_user_agent('zope.testbrowser'))
 
-    def test_firefox_chrome_and_zope_testbrowser_should_support_with_statement(self):
+    def test_should_support_with_statement(self):
         for browser in ('firefox', 'chrome', 'zope.testbrowser'):
             from splinter import Browser
             with Browser(browser) as internet:
                 pass
-
-class BrowserDeprecationTest(unittest.TestCase):
-
-    class Foo(object):
-        pass
-
-    def test_should_deprecate_with_the_given_message(self):
-        with warnings.catch_warnings(record=True) as warnings_list:
-            warnings.simplefilter('default')
-            cls = deprecate_driver_class(self.Foo, message="Foo was deprecated")
-            cls()
-            warning = warnings_list[0]
-            assert type(warning.message) is DeprecationWarning
-            self.assertEqual("Foo was deprecated", warning.message.args[0])
-
-    def test_should_prepend_a_Deprecated_to_class(self):
-        with warnings.catch_warnings(record=True):
-            warnings.simplefilter('default')
-            cls = deprecate_driver_class(self.Foo, message="Foo was deprecated")
-            self.assertEqual("DeprecatedFoo", cls.__name__)
-
-    def test_webdriverfirefox_should_be_deprecated(self):
-        with warnings.catch_warnings(record=True) as warnings_list:
-            warnings.simplefilter('default')
-            from splinter import Browser
-            browser = Browser('webdriver.firefox')
-            browser.quit()
-            warning_message = warnings_list[0].message.args[0]
-            self.assertEqual("'webdriver.firefox' is deprecated, use just 'firefox'", warning_message)
-
-    def test_webdriverchrome_should_be_deprecated(self):
-        with warnings.catch_warnings(record=True) as warnings_list:
-            warnings.simplefilter('default')
-            from splinter import Browser
-            browser = Browser('webdriver.chrome')
-            browser.quit()
-            warning_message = warnings_list[0].message.args[0]
-            self.assertEqual("'webdriver.chrome' is deprecated, use just 'chrome'", warning_message)
-

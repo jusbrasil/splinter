@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2012 splinter authors. All rights reserved.
+# Copyright 2013 splinter authors. All rights reserved.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from splinter.meta import InheritedDocs
 
@@ -51,11 +48,17 @@ class MetaTest(unittest.TestCase):
 
     def test_should_include_docs_from_superclass(self):
         "should include doc from superclass"
-        self.assertEqual(SuperClass.say_hello.__doc__, SubClass.say_hello.__doc__)
+        self.assertEqual(
+            SuperClass.say_hello.__doc__,
+            SubClass.say_hello.__doc__
+        )
 
     def test_should_include_docs_from_any_class_in_hierarchy(self):
         "should include doc from any class in hierarchy"
-        self.assertEqual(SuperClass.say_hello.__doc__, SubSubClass.say_hello.__doc__)
+        self.assertEqual(
+            SuperClass.say_hello.__doc__,
+            SubSubClass.say_hello.__doc__
+        )
 
     def test_change_docs_for_readonly_properties(self):
         "should also change docs for readonly properties"

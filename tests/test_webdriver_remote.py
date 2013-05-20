@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2012 splinter authors. All rights reserved.
+# Copyright 2013 splinter authors. All rights reserved.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import urllib
+import unittest
 
 from splinter import Browser
 from fake_webapp import EXAMPLE_APP
@@ -17,11 +15,18 @@ import subprocess
 
 
 def selenium_server_is_running():
-    ps = subprocess.Popen(['ps', '-o', 'command'], stdout=subprocess.PIPE).communicate()[0]
-    return 'selenium-server' in ps
+    try:
+        from splinter.driver.webdriver.remote import WebDriver
+        page_contents = urllib.urlopen(WebDriver.DEFAULT_URL).read()
+    except IOError:
+        return False
+    return 'WebDriver Hub' in page_contents
 
 
-@unittest.skipIf(not selenium_server_is_running(), 'Skipping the remote webdriver tests')
+@unittest.skipIf(
+    not selenium_server_is_running(),
+    'Skipping the remote webdriver tests'
+)
 class RemoteBrowserTest(WebDriverTests, unittest.TestCase):
 
     @classmethod
@@ -66,7 +71,7 @@ class RemoteBrowserTest(WebDriverTests, unittest.TestCase):
             droppable = self.browser.find_by_css('.droppable')
             self.browser.find_by_css('.draggable').drag_and_drop(droppable)
 
-    def test_mouseover_should_be_an_alias_to_mouse_over_and_be_deprecated(self):
+    def test_mouseover_should_be_an_alias_to_mouse_over(self):
         "Remote should not support mouseover"
         with self.assertRaises(NotImplementedError):
             self.browser.find_by_id('visible').mouseover()
